@@ -17,6 +17,10 @@ namespace Unity.Netcode
         public void Initialize(NetworkBehaviour networkBehaviour)
         {
             m_NetworkBehaviour = networkBehaviour;
+            if (IsDirty() && m_NetworkBehaviour != null)
+            {
+                m_NetworkBehaviour.MarkDirty();
+            }
         }
 
         public const NetworkVariableReadPermission DefaultReadPerm = NetworkVariableReadPermission.Everyone;
@@ -30,7 +34,7 @@ namespace Unity.Netcode
             WritePerm = writePerm;
         }
 
-        private protected bool m_IsDirty;
+        private bool m_IsDirty;
 
         /// <summary>
         /// Gets or sets the name of the network variable's instance
@@ -51,6 +55,10 @@ namespace Unity.Netcode
         public virtual void SetDirty(bool isDirty)
         {
             m_IsDirty = isDirty;
+            if (isDirty && m_NetworkBehaviour != null)
+            {
+                m_NetworkBehaviour.MarkDirty();
+            }
         }
 
         /// <summary>

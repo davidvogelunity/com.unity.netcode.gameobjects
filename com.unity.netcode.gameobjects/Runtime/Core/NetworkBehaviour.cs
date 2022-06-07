@@ -567,6 +567,14 @@ namespace Unity.Netcode
             }
         }
 
+        internal void MarkDirty()
+        {
+            if (m_NetworkObject != null)
+            {
+                NetworkManager.BehaviourUpdater.AddForUpdate(this);
+            }
+        }
+
         internal void PreNetworkVariableWrite()
         {
             // reset our "which variables got written" data
@@ -599,11 +607,6 @@ namespace Unity.Netcode
 
         private void NetworkVariableUpdate(ulong targetClientId, int behaviourIndex)
         {
-            if (!CouldHaveDirtyNetworkVariables())
-            {
-                return;
-            }
-
             for (int j = 0; j < m_DeliveryMappedNetworkVariableIndices.Count; j++)
             {
                 var shouldSend = false;
@@ -646,20 +649,6 @@ namespace Unity.Netcode
                     }
                 }
             }
-        }
-
-        private bool CouldHaveDirtyNetworkVariables()
-        {
-            // TODO: There should be a better way by reading one dirty variable vs. 'n'
-            for (int i = 0; i < NetworkVariableFields.Count; i++)
-            {
-                if (NetworkVariableFields[i].IsDirty())
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         internal void MarkVariablesDirty()

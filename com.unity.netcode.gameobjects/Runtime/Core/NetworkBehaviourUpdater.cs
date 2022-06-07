@@ -5,11 +5,16 @@ namespace Unity.Netcode
 {
     public class NetworkBehaviourUpdater
     {
-        private HashSet<NetworkObject> m_Touched = new HashSet<NetworkObject>();
+        private HashSet<NetworkBehaviour> m_Touched = new HashSet<NetworkBehaviour>();
 
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
         private ProfilerMarker m_NetworkBehaviourUpdate = new ProfilerMarker($"{nameof(NetworkBehaviour)}.{nameof(NetworkBehaviourUpdate)}");
 #endif
+
+        internal void AddForUpdate(NetworkBehaviour networkBehaviour)
+        {
+            m_Touched.Add(networkBehaviour);
+        }
 
         internal void NetworkBehaviourUpdate(NetworkManager networkManager)
         {
@@ -20,33 +25,24 @@ namespace Unity.Netcode
             {
                 if (networkManager.IsServer)
                 {
-                    m_Touched.Clear();
-                    for (int i = 0; i < networkManager.ConnectedClientsList.Count; i++)
+                    foreach (var networkBehaviour in m_Touched)
                     {
-                        var client = networkManager.ConnectedClientsList[i];
-                        var spawnedObjs = networkManager.SpawnManager.SpawnedObjectsList;
-                        m_Touched.UnionWith(spawnedObjs);
-                        foreach (var sobj in spawnedObjs)
+                        foreach (var client in networkManager.ConnectedClientsList)
                         {
-                            if (sobj.IsNetworkVisibleTo(client.ClientId))
+                            if (!networkBehaviour.HasNetworkObject || !networkBehaviour.NetworkObject.IsNetworkVisibleTo(client.ClientId))
                             {
-                                // Sync just the variables for just the objects this client sees
-                                for (int k = 0; k < sobj.ChildNetworkBehaviours.Count; k++)
-                                {
-                                    sobj.ChildNetworkBehaviours[k].VariableUpdate(client.ClientId);
-                                }
+                                continue;
                             }
+
+                            networkBehaviour.VariableUpdate(client.ClientId);
                         }
                     }
 
-                    // Now, reset all the no-longer-dirty variables
-                    foreach (var sobj in m_Touched)
+                    foreach (var networkBehaviour in m_Touched)
                     {
-                        for (int k = 0; k < sobj.ChildNetworkBehaviours.Count; k++)
-                        {
-                            sobj.ChildNetworkBehaviours[k].PostNetworkVariableWrite();
-                        }
+                        networkBehaviour.PostNetworkVariableWrite();
                     }
+                    m_Touched.Clear();
                 }
                 else
                 {
